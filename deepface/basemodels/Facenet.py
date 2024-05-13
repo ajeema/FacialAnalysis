@@ -1,12 +1,15 @@
 import os
 import gdown
-import tensorflow as tf
-from deepface.commons import functions
+from deepface.commons import package_utils, folder_utils
+from deepface.models.FacialRecognition import FacialRecognition
+from deepface.commons import logger as log
+
+logger = log.get_singletonish_logger()
 
 # --------------------------------
 # dependency configuration
 
-tf_version = int(tf.__version__.split(".", maxsplit=1)[0])
+tf_version = package_utils.get_tf_major_version()
 
 if tf_version == 1:
     from keras.models import Model
@@ -39,12 +42,48 @@ else:
 
 # --------------------------------
 
+# pylint: disable=too-few-public-methods
+class FaceNet128dClient(FacialRecognition):
+    """
+    FaceNet-128d model class
+    """
+
+    def __init__(self):
+        self.model = load_facenet128d_model()
+        self.model_name = "FaceNet-128d"
+        self.input_shape = (160, 160)
+        self.output_shape = 128
+
+
+class FaceNet512dClient(FacialRecognition):
+    """
+    FaceNet-1512d model class
+    """
+
+    def __init__(self):
+        self.model = load_facenet512d_model()
+        self.model_name = "FaceNet-512d"
+        self.input_shape = (160, 160)
+        self.output_shape = 512
+
 
 def scaling(x, scale):
     return x * scale
 
 
-def InceptionResNetV2(dimension=128):
+def InceptionResNetV1(dimension: int = 128) -> Model:
+    """
+    InceptionResNetV1 model heavily inspired from
+    github.com/davidsandberg/facenet/blob/master/src/models/inception_resnet_v1.py
+    As mentioned in Sandberg's repo's readme, pre-trained models are using Inception ResNet v1
+    Besides training process is documented at
+    sefiks.com/2018/09/03/face-recognition-with-facenet-in-keras/
+
+    Args:
+        dimension (int): number of dimensions in the embedding layer
+    Returns:
+        model (Model)
+    """
 
     inputs = Input(shape=(160, 160, 3))
     x = Conv2D(32, 3, strides=2, padding="valid", use_bias=False, name="Conv2d_1a_3x3")(inputs)
@@ -1615,20 +1654,24 @@ def InceptionResNetV2(dimension=128):
     return model
 
 
-# url = 'https://drive.google.com/uc?id=1971Xk5RwedbudGgTIrGAL4F7Aifu7id1'
-
-
-def loadModel(
+def load_facenet128d_model(
     url="https://github.com/serengil/deepface_models/releases/download/v1.0/facenet_weights.h5",
-):
-    model = InceptionResNetV2()
+) -> Model:
+    """
+    Construct FaceNet-128d model, download weights and then load weights
+    Args:
+        dimension (int): construct FaceNet-128d or FaceNet-512d models
+    Returns:
+        model (Model)
+    """
+    model = InceptionResNetV1()
 
     # -----------------------------------
 
-    home = functions.get_deepface_home()
+    home = folder_utils.get_deepface_home()
 
     if os.path.isfile(home + "/.deepface/weights/facenet_weights.h5") != True:
-        print("facenet_weights.h5 will be downloaded...")
+        logger.info("facenet_weights.h5 will be downloaded...")
 
         output = home + "/.deepface/weights/facenet_weights.h5"
         gdown.download(url, output, quiet=False)
@@ -1638,5 +1681,35 @@ def loadModel(
     model.load_weights(home + "/.deepface/weights/facenet_weights.h5")
 
     # -----------------------------------
+
+    return model
+
+
+def load_facenet512d_model(
+    url="https://github.com/serengil/deepface_models/releases/download/v1.0/facenet512_weights.h5",
+) -> Model:
+    """
+    Construct FaceNet-512d model, download its weights and load
+    Returns:
+        model (Model)
+    """
+
+    model = InceptionResNetV1(dimension=512)
+
+    # -------------------------
+
+    home = folder_utils.get_deepface_home()
+
+    if os.path.isfile(home + "/.deepface/weights/facenet512_weights.h5") != True:
+        logger.info("facenet512_weights.h5 will be downloaded...")
+
+        output = home + "/.deepface/weights/facenet512_weights.h5"
+        gdown.download(url, output, quiet=False)
+
+    # -------------------------
+
+    model.load_weights(home + "/.deepface/weights/facenet512_weights.h5")
+
+    # -------------------------
 
     return model
