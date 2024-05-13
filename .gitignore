@@ -8,8 +8,12 @@ Pipfile.lock
 .idea/
 deepface.egg-info/
 tests/dataset/*.pkl
-tests/sandbox.ipynb
+tests/*.ipynb
+tests/*.csv
 *.pyc
-.env
-.firebase-auth.json
-volumes/**
+**/.coverage
+**/.coverage.*
+benchmarks/results
+benchmarks/outputs
+benchmarks/dataset
+benchmarks/lfwe

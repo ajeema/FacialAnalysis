@@ -1,9 +1,13 @@
 import os
 import gdown
 import tensorflow as tf
-from deepface.commons import functions
+from deepface.commons import package_utils, folder_utils
+from deepface.models.FacialRecognition import FacialRecognition
+from deepface.commons import logger as log
 
-tf_version = int(tf.__version__.split(".", maxsplit=1)[0])
+logger = log.get_singletonish_logger()
+
+tf_version = package_utils.get_tf_major_version()
 if tf_version == 1:
     from keras.models import Model
     from keras.layers import Conv2D, ZeroPadding2D, Input, concatenate
@@ -21,10 +25,27 @@ else:
 
 # ---------------------------------------
 
+# pylint: disable=too-few-public-methods
+class OpenFaceClient(FacialRecognition):
+    """
+    OpenFace model class
+    """
 
-def loadModel(
+    def __init__(self):
+        self.model = load_model()
+        self.model_name = "OpenFace"
+        self.input_shape = (96, 96)
+        self.output_shape = 128
+
+
+def load_model(
     url="https://github.com/serengil/deepface_models/releases/download/v1.0/openface_weights.h5",
-):
+) -> Model:
+    """
+    Consturct OpenFace model, download its weights and load
+    Returns:
+        model (Model)
+    """
     myInput = Input(shape=(96, 96, 3))
 
     x = ZeroPadding2D(padding=(3, 3), input_shape=(96, 96, 3))(myInput)
@@ -359,10 +380,10 @@ def loadModel(
 
     # -----------------------------------
 
-    home = functions.get_deepface_home()
+    home = folder_utils.get_deepface_home()
 
     if os.path.isfile(home + "/.deepface/weights/openface_weights.h5") != True:
-        print("openface_weights.h5 will be downloaded...")
+        logger.info("openface_weights.h5 will be downloaded...")
 
         output = home + "/.deepface/weights/openface_weights.h5"
         gdown.download(url, output, quiet=False)
